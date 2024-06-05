@@ -1,9 +1,6 @@
 import random
-
 import torchmetrics
-
 from share import *
-
 import pytorch_lightning as pl
 import torch
 import os
@@ -26,10 +23,9 @@ from visa_dataloader import VisaDataset
 parser = argparse.ArgumentParser(description="DiAD")
 parser.add_argument("--resume_path", default='./models/output.ckpt')
 
-
 args = parser.parse_args()
 
-# Configs
+# 配置
 resume_path = args.resume_path
 
 batch_size = 1
@@ -39,21 +35,22 @@ only_mid_control = True
 evl_dir = "npz_result"
 logger = create_logger("global_logger", "log/")
 
-# First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
+# 首先使用 CPU 加载模型。PyTorch Lightning 将自动将其移至 GPU。
 model = create_model('models/diad.yaml').cpu()
 model.load_state_dict(load_state_dict(resume_path, location='cpu'), strict=False)
 model.learning_rate = learning_rate
 model.only_mid_control = only_mid_control
 
-# Misc
-dataset = MVTecDataset('test')
-# test_dataset = VisaDataset('test')
+# 其他配置
+dataset_root = 'data/MVTec/mvtec_anomaly_detection/'  # 指定数据集的根目录
+dataset = MVTecDataset('test', dataset_root)
 dataloader = DataLoader(dataset, num_workers=8, batch_size=batch_size, shuffle=True)
 pretrained_model = timm.create_model("resnet50", pretrained=True, features_only=True)
 pretrained_model = pretrained_model.cuda()
 pretrained_model.eval()
 
 model.eval()
+# os.makedirs(evl_dir, exist_ok=True)
 os.makedirs(evl_dir, exist_ok=True)
 with torch.no_grad():
     for input in dataloader:
@@ -75,7 +72,8 @@ with torch.no_grad():
         anomaly_map_prediction = anomaly_map.unsqueeze(dim=0).unsqueeze(dim=1)
         input["mask"] = input["mask"]
 
-        root = os.path.join('log_image/')
+        # root = os.path.join('log_image/')
+        root = os.path.join('pp/')
         name = input["filename"][0][-7:-4]
         filename_feature = "{}-features.jpg".format(name)
         path_feature = os.path.join(root, input["filename"][0][:-7], filename_feature)
